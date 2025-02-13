@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to Audiobook Converter</title>
+    <style>
+/* Reset default styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Variables */
+:root {
+  --primary-color: #1a1a1a;
+  --secondary-color: #ffffff;
+  --accent-color: #4a90e2;
+  --text-color: #ffffff;
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(74, 144, 226, 0.15);
+  --sans-font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Base styles */
+body {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  padding: 2rem;
+  font-family: var(--sans-font);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Container */
+.container {
+  max-width: 56rem;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* Title */
+.title {
+  font-size: clamp(1.875rem, 3vw, 2.5rem);
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--text-color);
+}
+
+/* Form */
+.form-container {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: var(--glass-shadow);
+  position: relative;
+}
+
+.form-container:before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 1rem;
+  background: linear-gradient(45deg, rgba(74, 144, 226, 0.3), rgba(255, 255, 255, 0.1), rgba(74, 144, 226, 0.3));
+  z-index: -1;
+  animation: borderGlow 4s linear infinite;
+}
+
+@keyframes borderGlow {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 0.75rem;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.form-textarea {
+  height: 16rem;
+  resize: vertical;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 30px rgba(74, 144, 226, 0.2), 0 0 60px rgba(74, 144, 226, 0.1);
+}
+
+/* Select styles */
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 1rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
+}
+
+/* Button */
+.submit-button {
+  background-color: var(--accent-color);
+  color: var(--text-color);
+  font-weight: 600;
+  padding: 1rem 2rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.submit-button:hover {
+  background-color: #357abd;
+  box-shadow: 0 0 20px rgba(74, 144, 226, 0.3);
+}
+
+.submit-button:disabled {
+  background-color: rgba(255, 255, 255, 0.1);
+  cursor: not-allowed;
+}
+
+/* Status section */
+.status-container {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.progress-container {
+  margin-top: 1rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 0.625rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease-in-out;
+}
+
+.progress-bar-fill.loading {
+  background-color: var(--accent-color);
+}
+
+.progress-bar-fill.success {
+  background-color: #10b981;
+}
+
+.progress-bar-fill.error {
+  background-color: #ef4444;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  body {
+    padding: 1rem;
+  }
+  
+  .form-container {
+    padding: 1.5rem;
+  }
+  
+  .title {
+    font-size: 1.5rem;
+  }
+  
+  .form-input,
+  .form-select,
+  .form-textarea {
+    padding: 0.75rem;
+  }
+  
+  .submit-button {
+    padding: 0.75rem 1.5rem;
+  }
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Text to Audiobookshelf</h1>
+        
+        <form id="textForm" class="form-container">
+            <div class="form-group">
+                <label class="form-label" for="title">
+                    Title
+                </label>
+                <input class="form-input" 
+                       id="title" 
+                       name="title" 
+                       type="text" 
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="voice">
+                    Voice
+                </label>
+                <select class="form-select"
+                        id="voice" 
+                        name="voice">
+                    <optgroup label="US English - Female">
+                        <option value="af_alloy">Alloy (US Female)</option>
+                        <option value="af_bella">Bella (US Female)</option>
+                        <option value="af_nova">Nova (US Female)</option>
+                        <option value="af_sarah">Sarah (US Female)</option>
+                    </optgroup>
+                    <optgroup label="US English - Male">
+                        <option value="am_adam">Adam (US Male)</option>
+                        <option value="am_eric">Eric (US Male)</option>
+                        <option value="am_michael">Michael (US Male)</option>
+                    </optgroup>
+                    <optgroup label="UK English - Female">
+                        <option value="bf_emma">Emma (UK Female)</option>
+                        <option value="bf_lily">Lily (UK Female)</option>
+                    </optgroup>
+                    <optgroup label="UK English - Male">
+                        <option value="bm_george">George (UK Male)</option>
+                        <option value="bm_lewis">Lewis (UK Male)</option>
+                    </optgroup>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="text">
+                    Text Content
+                </label>
+                <textarea class="form-textarea" 
+                          id="text" 
+                          name="text" 
+                          required></textarea>
+            </div>
+            
+            <div>
+                <button class="submit-button" type="submit">
+                    Convert to Audio
+                </button>
+            </div>
+        </form>
+        
+        <div id="status" class="status-container" style="display: none;">
+            <p id="statusText" class="text-center"></p>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div id="progressBar" class="progress-bar-fill loading" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch available voices when page loads
+        async function loadVoices() {
+            try {
+                const response = await fetch('/voices');
+                const voices = await response.json();
+                const voiceSelect = document.getElementById('voice');
+                
+                // Clear loading option
+                voiceSelect.innerHTML = '';
+                
+                // Create US voices group
+                const usGroup = document.createElement('optgroup');
+                usGroup.label = 'US English';
+                
+                // Create UK voices group
+                const ukGroup = document.createElement('optgroup');
+                ukGroup.label = 'UK English';
+                
+                // Sort voices into groups
+                voices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.id;
+                    option.textContent = voice.name;
+                    
+                    if (voice.id.startsWith('a')) {
+                        usGroup.appendChild(option);
+                    } else {
+                        ukGroup.appendChild(option);
+                    }
+                });
+                
+                voiceSelect.appendChild(usGroup);
+                voiceSelect.appendChild(ukGroup);
+                
+                // Select first US voice by default
+                if (usGroup.children.length > 0) {
+                    voiceSelect.value = usGroup.children[0].value;
+                }
+            } catch (error) {
+                console.error('Error loading voices:', error);
+                const option = document.createElement('option');
+                option.value = 'af_sarah';
+                option.textContent = 'Sarah (US English Female)';
+                voiceSelect.appendChild(option);
+            }
+        }
+
+        // Load voices when page loads
+        document.addEventListener('DOMContentLoaded', loadVoices);
+
+        document.getElementById('textForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            const progressBar = document.getElementById('progressBar');
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            
+            // Show status and disable submit button
+            statusDiv.style.display = 'block';
+            submitButton.disabled = true;
+            
+            // Prepare form data
+            const formData = new FormData(e.target);
+            
+            try {
+                statusText.textContent = 'Processing text and generating audio...';
+                progressBar.style.width = '50%';
+                
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusText.textContent = 'Success! Audio file has been created and uploaded to Audiobookshelf.';
+                    progressBar.style.width = '100%';
+                    progressBar.classList.remove('loading');
+                    progressBar.classList.add('success');
+                } else {
+                    throw new Error(result.error || 'Failed to process request');
+                }
+            } catch (error) {
+                statusText.textContent = `Error: ${error.message}`;
+                progressBar.style.width = '100%';
+                progressBar.classList.remove('loading');
+                progressBar.classList.add('error');
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
