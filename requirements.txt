@@ -1,3 +1,4 @@
+aicodeprep==0.2.2
 annotated-types==0.7.0
 attrs==25.1.0
 babel==2.17.0
@@ -59,6 +60,7 @@ pydantic_core==2.27.2
 Pygments==2.19.1
 pylatexenc==2.10
 pyparsing==3.2.1
+pyperclip==1.9.0
 python-dateutil==2.9.0.post0
 PyYAML==6.0.2
 rdflib==7.1.3

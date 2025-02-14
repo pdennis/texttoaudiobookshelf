@@ -8,12 +8,13 @@ from loguru import logger
 import time
 import requests
 import tempfile
+from config import load_config, save_config
 
 app = Flask(__name__)
 
-# Configuration
-AUDIOBOOKSHELF_URL = os.getenv('AUDIOBOOKSHELF_URL', 'http://localhost:13378')
-AUDIOBOOKSHELF_TOKEN = os.getenv('AUDIOBOOKSHELF_TOKEN', '')
+# Load configuration
+config = load_config()
+
 
 # TTS Functions
 def initialize_model(use_gpu=False):
@@ -213,9 +214,63 @@ class AudiobookshelfUploader:
 def index():
     return render_template('index.html')
 
+@app.route('/config', methods=['GET'])
+def get_config():
+    """Get current configuration."""
+    return jsonify(config)
+
+@app.route('/config', methods=['POST'])
+def update_config():
+    """Update configuration."""
+    try:
+        # Debug incoming request
+        logger.info(f"Received config update request with content type: {request.content_type}")
+        logger.info(f"Request data: {request.get_data()}")
+        
+        if not request.is_json:
+            logger.error("Request content-type is not application/json")
+            return jsonify({'error': 'Content-Type must be application/json'}), 400
+
+        new_config = request.get_json()
+        logger.info(f"Parsed JSON config: {new_config}")
+        
+        if not new_config:
+            logger.error("No JSON data received")
+            return jsonify({'error': 'No JSON data received'}), 400
+
+        # Validate configuration
+        required_fields = ['AUDIOBOOKSHELF_URL', 'AUDIOBOOKSHELF_TOKEN']
+        if not all(field in new_config for field in required_fields):
+            logger.error("Missing required configuration fields")
+            return jsonify({'error': 'Missing required fields'}), 400
+            
+        # Update config
+        config.update(new_config)
+        save_config(config)
+        logger.info("Configuration saved to file")
+        
+        # Test connection
+        uploader = AudiobookshelfUploader(
+            config['AUDIOBOOKSHELF_URL'],
+            config['AUDIOBOOKSHELF_TOKEN']
+        )
+        try:
+            uploader.get_library_and_folder_ids()
+            logger.info("Configuration test successful")
+            return jsonify({'message': 'Configuration updated and connection tested successfully'})
+        except Exception as e:
+            logger.error(f"Configuration test failed: {str(e)}")
+            return jsonify({'error': f'Configuration saved but connection test failed: {str(e)}'}), 400
+            
+    except Exception as e:
+        logger.error(f"Error updating configuration: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/process', methods=['POST'])
 def process_text():
     try:
+        AUDIOBOOKSHELF_URL = config['AUDIOBOOKSHELF_URL']
+        AUDIOBOOKSHELF_TOKEN = config['AUDIOBOOKSHELF_TOKEN']
         text = request.form.get('text')
         title = request.form.get('title')
         voice = request.form.get('voice', 'af_sarah')  # Default voice
@@ -253,7 +308,8 @@ def process_text():
                 return jsonify({
                     'success': True,
                     'message': 'Processing complete',
-                    'library_item_id': library_item_id
+                    'library_item_id': library_item_id,
+                    'server_url': config['AUDIOBOOKSHELF_URL']  # Add this line
                 })
             
             return jsonify({'error': 'Failed to generate audio'}), 500

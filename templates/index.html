@@ -220,7 +220,44 @@ body {
 <body>
     <div class="container">
         <h1 class="title">Text to Audiobookshelf</h1>
+<div class="form-container" style="margin-bottom: 2rem;">
+    <div class="settings-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 600;">Configuration</h2>
+        <button id="toggleConfig" class="submit-button" style="width: auto; padding: 0.5rem 1rem;">
+            Show Settings
+        </button>
+    </div>
+    
+    <form id="configForm" style="display: none;">
+        <div class="form-group">
+            <label class="form-label" for="audiobookshelfUrl">
+                Audiobookshelf URL
+            </label>
+            <input class="form-input" 
+                   id="audiobookshelfUrl" 
+                   name="AUDIOBOOKSHELF_URL" 
+                   type="url" 
+                   required>
+        </div>
         
+        <div class="form-group">
+            <label class="form-label" for="audiobookshelfToken">
+                Audiobookshelf Token
+            </label>
+            <input class="form-input" 
+                   id="audiobookshelfToken" 
+                   name="AUDIOBOOKSHELF_TOKEN" 
+                   type="password" 
+                   required>
+        </div>
+        
+        <div>
+            <button class="submit-button" type="submit">
+                Save Configuration
+            </button>
+        </div>
+    </form>
+</div>        
         <form id="textForm" class="form-container">
             <div class="form-group">
                 <label class="form-label" for="title">
@@ -290,7 +327,18 @@ body {
     </div>
 
     <script>
-        // Fetch available voices when page loads
+        // Configuration management
+        const configForm = document.getElementById('configForm');
+        const toggleConfigBtn = document.getElementById('toggleConfig');
+        
+        // Toggle configuration form
+        toggleConfigBtn.addEventListener('click', () => {
+            const isHidden = configForm.style.display === 'none';
+            configForm.style.display = isHidden ? 'block' : 'none';
+            toggleConfigBtn.textContent = isHidden ? 'Hide Settings' : 'Show Settings';
+        });
+        
+        // Fetch available voices
         async function loadVoices() {
             try {
                 const response = await fetch('/voices');
@@ -336,10 +384,66 @@ body {
                 voiceSelect.appendChild(option);
             }
         }
+        
+        // Load current configuration
+        async function loadConfiguration() {
+            try {
+                const response = await fetch('/config');
+                const config = await response.json();
+                
+                document.getElementById('audiobookshelfUrl').value = config.AUDIOBOOKSHELF_URL;
+                document.getElementById('audiobookshelfToken').value = config.AUDIOBOOKSHELF_TOKEN;
+            } catch (error) {
+                console.error('Error loading configuration:', error);
+            }
+        }
+        
+        // Save configuration
+configForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const config = Object.fromEntries(formData.entries());
+    
+    try {
+        console.log('Sending config:', config);
+        const response = await fetch('/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(config)
+        });
+        
+        // Log the raw response for debugging
+        const rawResponse = await response.text();
+        console.log('Raw response:', rawResponse);
+        
+        let result;
+        try {
+            result = JSON.parse(rawResponse);
+        } catch (parseError) {
+            console.error('Failed to parse response:', parseError);
+            throw new Error(`Server response was not valid JSON: ${rawResponse}`);
+        }
+        
+        if (response.ok) {
+            alert('Configuration saved successfully!');
+            // Optionally hide the config form after successful save
+            configForm.style.display = 'none';
+            toggleConfigBtn.textContent = 'Show Settings';
+        } else {
+            alert(`Error: ${result.error || 'Unknown error occurred'}`);
+        }
+    } catch (error) {
+        console.error('Config save error:', error);
+        alert(`Error saving configuration: ${error.message}`);
+    }
+});
 
-        // Load voices when page loads
-        document.addEventListener('DOMContentLoaded', loadVoices);
 
+        // Handle text form submission
         document.getElementById('textForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -367,13 +471,18 @@ body {
                 const result = await response.json();
                 
                 if (response.ok) {
-                    statusText.textContent = 'Success! Audio file has been created and uploaded to Audiobookshelf.';
-                    progressBar.style.width = '100%';
-                    progressBar.classList.remove('loading');
-                    progressBar.classList.add('success');
-                } else {
-                    throw new Error(result.error || 'Failed to process request');
-                }
+    const absLink = `${result.server_url}/item/${result.library_item_id}`;
+    statusText.innerHTML = `Success! Audio file has been created and uploaded to Audiobookshelf.<br><br>
+        <a href="${absLink}" target="_blank" style="color: #4a90e2; text-decoration: underline;">
+            View in Audiobookshelf
+        </a>`;
+    progressBar.style.width = '100%';
+    progressBar.classList.remove('loading');
+    progressBar.classList.add('success');
+} else {
+    throw new Error(result.error || 'Failed to process request');
+}
+
             } catch (error) {
                 statusText.textContent = `Error: ${error.message}`;
                 progressBar.style.width = '100%';
@@ -382,6 +491,12 @@ body {
             } finally {
                 submitButton.disabled = false;
             }
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConfiguration();
+            loadVoices();
         });
     </script>
 </body>
