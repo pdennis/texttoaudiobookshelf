@@ -1,7 +1,7 @@
 # Text to Audiobookshelf
 
 A Flask web application that converts text to speech using Kokoro TTS and automatically uploads the resulting audio files to an Audiobookshelf server. Features a modern, responsive UI with real-time processing status updates.
-!./t2abs.png
+![screenshot](./t2abs.png)
 ## Features
 
 - Convert text to natural-sounding speech using Kokoro TTS
