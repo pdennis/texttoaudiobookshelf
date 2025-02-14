@@ -319,4 +319,5 @@ def process_text():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('FLASK_PORT', 10108))
+    app.run(host='0.0.0.0', port=port, debug=False)

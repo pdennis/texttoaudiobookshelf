@@ -78,7 +78,7 @@ shellingham==1.5.4
 six==1.17.0
 smart-open==7.1.0
 soundfile==0.13.1
-spacy==3.8.4
+spacy>=3.7.2,<3.8.0
 spacy-curated-transformers==0.3.0
 spacy-legacy==3.0.12
 spacy-loggers==1.0.5

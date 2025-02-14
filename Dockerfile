@@ -1,49 +1,48 @@
-# Dockerfile
-FROM python:3.11-slim
+# Use conda base image
+FROM condaforge/mambaforge:latest
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
+    build-essential \
     libsndfile1 \
     git \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
+# Copy requirements
 COPY requirements.txt .
 
-# Install Python dependencies
-# We use --no-cache-dir to keep the image smaller
+# Create conda environment
+RUN conda create -n myenv python=3.11 -y
+
+# Install packages with conda first (these are the problematic ones)
+RUN conda install -n myenv -c conda-forge \
+    blis \
+    thinc \
+    spacy \
+    numpy \
+    scipy \
+    -y
+
+# Activate conda environment and install remaining packages with pip
+SHELL ["conda", "run", "-n", "myenv", "/bin/bash", "-c"]
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download spacy model (since it's in your requirements)
-RUN python -m spacy download en_core_web_sm
-
-# Copy application code
+# Copy application
 COPY . .
 
-# Expose port
-EXPOSE 5000
+# Create non-root user
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
 
-# Run gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "300", "--workers", "2", "app:app"]
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_APP=app.py
+ENV FLASK_PORT=10108
 
-# docker-compose.yml
-version: '3.8'
+EXPOSE 10108
 
-services:
-  tts-server:
-    build: .
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./config.json:/app/config.json
-    deploy:
-      resources:
-        limits:
-          memory: 4G  # Increased memory limit due to ML models
-        reservations:
-          memory: 2G  # Minimum memory reservation
-    restart: unless-stopped
+# Run with conda environment
+ENTRYPOINT ["conda", "run", "--no-capture-output", "-n", "myenv"]
+CMD ["python", "app.py"]
